@@ -1,0 +1,1067 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Calculadora de Perfil Térmico Cruzado (Horno 1 a Horno 2)</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Chart.js for thermal profiling graphs -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#fff7ed',
+              100: '#ffedd5',
+              500: '#f97316',
+              600: '#ea580c',
+              700: '#c2410c',
+              800: '#9a3412',
+              900: '#7c2d12',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    input[type=number]::-webkit-inner-spin-button,
+    input[type=number]::-webkit-outer-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+    input[type=number] {
+      -moz-appearance: textfield;
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      height: 6px;
+      width: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 9999px;
+    }
+    .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #475569;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 min-h-screen font-sans antialiased">
+
+  <header class="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 sticky top-0 z-30 shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex flex-wrap items-center justify-between gap-4">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-orange-500 to-amber-500 flex items-center justify-center text-white shadow-md shadow-orange-500/20">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.879 16.121A3 3 0 1012.015 11L11 14H9c0 .768.293 1.536.879 2.121z" />
+          </svg>
+        </div>
+        <div>
+          <h1 class="text-lg font-bold text-slate-900 dark:text-white leading-tight">Simulador Térmico de Horno Continuo</h1>
+          <p class="text-xs text-slate-500 dark:text-slate-400">Transferencia de curva térmica por integración de calor acumulado</p>
+        </div>
+      </div>
+
+      <div class="flex items-center flex-wrap gap-2">
+        <button id="btn-calcular" class="px-4 py-2 text-xs font-bold rounded-lg bg-orange-600 hover:bg-orange-700 active:scale-95 text-white transition-all shadow-md shadow-orange-600/30 flex items-center gap-1.5 cursor-pointer">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+          </svg>
+          Calcular
+        </button>
+
+        <button id="btn-borrar" class="px-3.5 py-2 text-xs font-semibold rounded-lg bg-slate-200 hover:bg-rose-100 hover:text-rose-700 text-slate-700 dark:bg-slate-700 dark:hover:bg-rose-950/60 dark:hover:text-rose-300 dark:text-slate-200 transition-colors flex items-center gap-1.5 cursor-pointer">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+          </svg>
+          Borrar
+        </button>
+
+        <button id="btn-load-excel" class="px-3.5 py-2 text-xs font-semibold rounded-lg bg-orange-100 hover:bg-orange-200 text-orange-800 dark:bg-orange-950/50 dark:hover:bg-orange-900 dark:text-orange-300 transition-colors flex items-center gap-1.5 shadow-sm cursor-pointer">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          Restablecer datos originales
+        </button>
+        <button id="theme-toggle" class="p-2 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 dark:text-slate-400">
+          <svg id="theme-icon-dark" class="w-4 h-4 hidden" fill="currentColor" viewBox="0 0 20 20"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path></svg>
+          <svg id="theme-icon-light" class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" clip-rule="evenodd"></path></svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Notification Banner (sin alert) -->
+  <div id="status-toast" class="hidden max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-3">
+    <div id="status-toast-inner" class="py-2.5 px-4 rounded-xl text-xs font-semibold flex items-center justify-between shadow-sm transition-all duration-300">
+      <span id="status-toast-msg">Mensaje de notificación</span>
+      <button onclick="document.getElementById('status-toast').classList.add('hidden')" class="opacity-75 hover:opacity-100 ml-4 font-bold text-sm leading-none">&times;</button>
+    </div>
+  </div>
+
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+    <!-- Global Parameters Banner (Mínimos indispensables) -->
+    <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-5">
+      <div class="flex items-center justify-between pb-3 mb-4 border-b border-slate-100 dark:border-slate-700">
+        <div class="flex items-center gap-2">
+          <span class="flex h-3 w-3 relative">
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
+            <span class="relative inline-flex rounded-full h-3 w-3 bg-orange-500"></span>
+          </span>
+          <h2 class="text-sm font-bold uppercase tracking-wider text-slate-700 dark:text-slate-200">Parámetros Globales Indispensables</h2>
+        </div>
+        <div class="text-xs text-slate-400">Modelo continuo por traslape temporal</div>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
+        <!-- T inicial H1 -->
+        <div class="bg-slate-50 dark:bg-slate-900/60 p-3.5 rounded-xl border border-slate-200/80 dark:border-slate-700">
+          <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
+            Temperatura Inicial (Horno 1)
+          </label>
+          <div class="relative">
+            <input type="number" id="input-t-inicial-h1" value="28" step="0.1" class="w-full pl-3 pr-10 py-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg text-sm font-bold text-blue-600 dark:text-blue-400 focus:ring-2 focus:ring-blue-500 outline-none">
+            <span class="absolute right-3 top-2 text-xs font-medium text-slate-400">°C</span>
+          </div>
+          <p class="text-[11px] text-slate-400 mt-1">Testigo al entrar a Horno 1</p>
+        </div>
+
+        <!-- T inicial H2 -->
+        <div class="bg-orange-50/60 dark:bg-orange-950/20 p-3.5 rounded-xl border border-orange-200 dark:border-orange-800/60">
+          <div class="flex items-center justify-between mb-1">
+            <label class="block text-xs font-bold text-orange-700 dark:text-orange-300">
+              Temperatura Inicial (Horno 2)
+            </label>
+          </div>
+          <div class="relative">
+            <input type="number" id="input-t-inicial-h2" value="28" step="0.1" class="w-full pl-3 pr-10 py-1.5 bg-white dark:bg-slate-800 border border-orange-300 dark:border-orange-600 rounded-lg text-sm font-bold text-orange-600 dark:text-orange-400 focus:ring-2 focus:ring-orange-500 outline-none">
+            <span class="absolute right-3 top-2 text-xs font-medium text-orange-400">°C</span>
+          </div>
+          <p class="text-[11px] text-orange-700/80 dark:text-orange-400/80 mt-1">Testigo al entrar a Horno 2</p>
+        </div>
+
+        <!-- Tiempo Horno 1 -->
+        <div class="bg-slate-50 dark:bg-slate-900/60 p-3.5 rounded-xl border border-slate-200/80 dark:border-slate-700">
+          <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
+            Tiempo de Perfil (Horno 1)
+          </label>
+          <div class="relative">
+            <input type="number" id="input-time-h1" value="360" step="1" class="w-full pl-3 pr-10 py-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg text-sm font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none">
+            <span class="absolute right-3 top-2 text-xs font-medium text-slate-400">seg</span>
+          </div>
+          <p class="text-[11px] text-slate-400 mt-1" id="label-dwell-h1">Dwell: 60 s / zona (6 zonas)</p>
+        </div>
+
+        <!-- Tiempo Horno 2 -->
+        <div class="bg-slate-50 dark:bg-slate-900/60 p-3.5 rounded-xl border border-slate-200/80 dark:border-slate-700">
+          <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
+            Tiempo de Perfil (Horno 2)
+          </label>
+          <div class="relative">
+            <input type="number" id="input-time-h2" value="360" step="1" class="w-full pl-3 pr-10 py-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg text-sm font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none">
+            <span class="absolute right-3 top-2 text-xs font-medium text-slate-400">seg</span>
+          </div>
+          <p class="text-[11px] text-slate-400 mt-1" id="label-dwell-h2">Dwell: 120 s / zona (3 zonas)</p>
+        </div>
+
+        <!-- Masa Térmica / Cp testigo -->
+        <div class="bg-slate-50 dark:bg-slate-900/60 p-3.5 rounded-xl border border-slate-200/80 dark:border-slate-700">
+          <div class="flex items-center justify-between mb-1">
+            <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300">
+              Capacitancia Térmica (Cp)
+            </label>
+            <span class="text-[10px] text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-950 px-1.5 py-0.5 rounded font-mono">Testigo</span>
+          </div>
+          <div class="relative">
+            <input type="number" id="input-cp-testigo" value="20.6984" step="0.0001" class="w-full pl-3 pr-16 py-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg text-sm font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 outline-none">
+            <span class="absolute right-2 top-2 text-[10px] font-medium text-slate-400">kJ/(m²·°C)</span>
+          </div>
+          <p class="text-[11px] text-slate-400 mt-1">Relación ΔQ / ΔT del testigo</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+      <!-- Tabla Horno 1: Perfil de Referencia -->
+      <section class="lg:col-span-6 bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-5 flex flex-col justify-between">
+        <div>
+          <div class="flex items-center justify-between pb-3 mb-4 border-b border-slate-100 dark:border-slate-700">
+            <div>
+              <span class="text-xs font-semibold uppercase text-blue-600 dark:text-blue-400 tracking-wider">Entrada de Referencia</span>
+              <h3 class="text-base font-bold text-slate-900 dark:text-white">Horno 1 (Perfil de Referencia)</h3>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <button id="btn-add-z1" class="text-xs px-2.5 py-1 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-md font-medium text-slate-700 dark:text-slate-200 transition">+ Zona</button>
+              <button id="btn-rem-z1" class="text-xs px-2.5 py-1 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-md font-medium text-rose-600 transition">- Zona</button>
+            </div>
+          </div>
+
+          <div class="overflow-x-auto custom-scrollbar">
+            <table class="w-full text-left text-xs">
+              <thead>
+                <tr class="bg-slate-100 dark:bg-slate-900/60 text-slate-600 dark:text-slate-300 font-semibold border-b border-slate-200 dark:border-slate-700">
+                  <th class="py-2.5 px-2">Zona</th>
+                  <th class="py-2.5 px-2">T Prom Aire (°C)</th>
+                  <th class="py-2.5 px-2">T Testigo (°C)</th>
+                  <th class="py-2.5 px-2 text-right">Calor Abs. (W/m²)</th>
+                  <th class="py-2.5 px-2 text-right">Q Acum. (kJ/m²)</th>
+                  <th class="py-2.5 px-2 text-right">U (W/m²°C)</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-horno1" class="divide-y divide-slate-100 dark:divide-slate-700">
+                <!-- Se llena con JS -->
+              </tbody>
+              <tfoot class="border-t-2 border-slate-200 dark:border-slate-700 font-bold bg-slate-50 dark:bg-slate-900/30 text-xs">
+                <tr>
+                  <td class="py-2 px-2 text-slate-500">Total</td>
+                  <td class="py-2 px-2" id="h1-t-prom-avg">-</td>
+                  <td class="py-2 px-2 text-orange-600" id="h1-t-final">-</td>
+                  <td class="py-2 px-2 text-right">-</td>
+                  <td class="py-2 px-2 text-right text-orange-600" id="h1-q-total">-</td>
+                  <td class="py-2 px-2 text-right">-</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+        <p class="text-[11px] text-slate-400 mt-3 italic">* Modifica la Temperatura del Aire y la Temperatura del Testigo por cada zona. Los calores y U se calculan automáticamente.</p>
+      </section>
+
+      <!-- Horno 2 Configuración de coeficientes U -->
+      <section class="lg:col-span-6 bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-5 flex flex-col justify-between">
+        <div>
+          <div class="flex items-center justify-between pb-3 mb-4 border-b border-slate-100 dark:border-slate-700">
+            <div>
+              <span class="text-xs font-semibold uppercase text-orange-600 dark:text-orange-400 tracking-wider">Entrada de Diseño</span>
+              <h3 class="text-base font-bold text-slate-900 dark:text-white">Horno 2 (Coeficientes de Convección)</h3>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <button id="btn-add-z2" class="text-xs px-2.5 py-1 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-md font-medium text-slate-700 dark:text-slate-200 transition">+ Zona</button>
+              <button id="btn-rem-z2" class="text-xs px-2.5 py-1 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-md font-medium text-rose-600 transition">- Zona</button>
+            </div>
+          </div>
+
+          <p class="text-xs text-slate-500 dark:text-slate-400 mb-3">
+            Especifica el coeficiente global de transferencia de calor U de cada zona del Horno 2 (convección forzada/radiación del nuevo equipo).
+          </p>
+
+          <div class="overflow-x-auto custom-scrollbar">
+            <table class="w-full text-left text-xs">
+              <thead>
+                <tr class="bg-slate-100 dark:bg-slate-900/60 text-slate-600 dark:text-slate-300 font-semibold border-b border-slate-200 dark:border-slate-700">
+                  <th class="py-2.5 px-3">Zona Horno 2</th>
+                  <th class="py-2.5 px-3">Tiempo de residencia (seg)</th>
+                  <th class="py-2.5 px-3">U Especificado (W/m²·°C)</th>
+                  <th class="py-2.5 px-3">Fracción de ciclo</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-horno2-config" class="divide-y divide-slate-100 dark:divide-slate-700">
+                <!-- Se llena con JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="mt-4 p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-xl text-[11px] text-amber-800 dark:text-amber-300 flex items-start gap-2">
+          <svg class="w-4 h-4 mt-0.5 flex-shrink-0 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          <div>
+            <strong>Algoritmo de Mapeo Temporal:</strong> Se proyecta el tiempo relativo de Horno 2 sobre el Horno 1. El calor total absorbido se conserva estrictamente entre ambos perfiles térmicos.
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-md border-2 border-orange-500/20 dark:border-orange-500/30 p-5">
+      <div class="flex flex-wrap items-center justify-between pb-3 mb-4 border-b border-slate-100 dark:border-slate-700 gap-3">
+        <div class="flex items-center gap-3">
+          <div class="p-2 bg-orange-500 rounded-lg text-white">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+          </div>
+          <div>
+            <span class="text-xs font-bold uppercase tracking-wider text-orange-600 dark:text-orange-400">Resultados del Perfil Cruzado</span>
+            <h3 class="text-lg font-bold text-slate-900 dark:text-white">Parámetros de Salida (Horno 2)</h3>
+          </div>
+        </div>
+
+        <!-- Formula toggle options -->
+        <div class="flex items-center gap-2 bg-slate-100 dark:bg-slate-700/60 p-1 rounded-xl text-xs">
+          <span class="text-slate-500 dark:text-slate-400 px-2 font-medium">Modelo T Aire:</span>
+          <button id="opt-t-prom" class="px-2.5 py-1 rounded-lg font-semibold bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm transition">
+            T Promedio Testigo
+          </button>
+          <button id="opt-t-excel" class="px-2.5 py-1 rounded-lg font-semibold text-slate-500 dark:text-slate-400 hover:text-slate-900 transition" title="Utiliza T final en Z1 para reproducir el valor exacto 119.95 de la hoja original">
+            Ajuste Estricto Excel (119.95°)
+          </button>
+        </div>
+      </div>
+
+      <!-- Main Results Table -->
+      <div class="overflow-x-auto custom-scrollbar">
+        <table class="w-full text-left text-sm">
+          <thead>
+            <tr class="bg-gradient-to-r from-orange-50 to-amber-50 dark:from-slate-900 dark:to-slate-800 text-slate-700 dark:text-slate-200 font-bold border-b border-orange-200 dark:border-slate-700">
+              <th class="py-3 px-4">Zona (i)</th>
+              <th class="py-3 px-4">Calor acumulado por zona<br><span class="text-xs font-normal text-slate-500">(kJ/m²)</span></th>
+              <th class="py-3 px-4">Flux de calor requerido<br><span class="text-xs font-normal text-slate-500">(W/m²)</span></th>
+              <th class="py-3 px-4">Diferencial del testigo<br><span class="text-xs font-normal text-slate-500">ΔT (°C)</span></th>
+              <th class="py-3 px-4">Temperatura del testigo<br><span class="text-xs font-normal text-slate-500">(°C)</span></th>
+              <th class="py-3 px-4 text-orange-600 dark:text-orange-400 font-extrabold">Temperatura Air Horno 2<br><span class="text-xs font-normal text-orange-500">(°C)</span></th>
+            </tr>
+          </thead>
+          <tbody id="tbody-perfil-cruzado" class="divide-y divide-slate-100 dark:divide-slate-700 font-medium">
+            <!-- Rellenado dinámicamente con JavaScript -->
+          </tbody>
+          <tfoot class="border-t-2 border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900/60 font-bold">
+            <tr id="tfoot-perfil-cruzado">
+              <!-- Totales -->
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+
+      <!-- Quick Metrics Cards -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6 pt-5 border-t border-slate-100 dark:border-slate-700">
+        <div class="p-3.5 bg-orange-50/60 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-900/40 rounded-xl">
+          <div class="text-xs text-orange-700 dark:text-orange-400 font-medium">Calor Total Transferido</div>
+          <div class="text-xl font-extrabold text-orange-900 dark:text-orange-200 mt-1" id="metric-total-heat">-</div>
+          <div class="text-[11px] text-orange-600/80">kJ/m² equivalentes</div>
+        </div>
+        <div class="p-3.5 bg-blue-50/60 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900/40 rounded-xl">
+          <div class="text-xs text-blue-700 dark:text-blue-400 font-medium">Temperatura Final Testigo</div>
+          <div class="text-xl font-extrabold text-blue-900 dark:text-blue-200 mt-1" id="metric-final-temp">-</div>
+          <div class="text-[11px] text-blue-600/80" id="metric-temp-diff">ΔT total: -</div>
+        </div>
+        <div class="p-3.5 bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/40 rounded-xl">
+          <div class="text-xs text-emerald-700 dark:text-emerald-400 font-medium">Flujo Máximo Requerido</div>
+          <div class="text-xl font-extrabold text-emerald-900 dark:text-emerald-200 mt-1" id="metric-max-flux">-</div>
+          <div class="text-[11px] text-emerald-600/80">Zona con mayor demanda</div>
+        </div>
+        <div class="p-3.5 bg-purple-50/60 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-900/40 rounded-xl">
+          <div class="text-xs text-purple-700 dark:text-purple-400 font-medium">Consistencia de Energía</div>
+          <div class="text-xl font-extrabold text-purple-900 dark:text-purple-200 mt-1" id="metric-balance">100.0%</div>
+          <div class="text-[11px] text-purple-600/80">Conservación Q₁ = Q₂</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      
+      <!-- Chart -->
+      <div class="lg:col-span-8 bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-5">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-sm font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+            <svg class="w-4 h-4 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"/></svg>
+            Curvas Comparativas de Perfil Térmico
+          </h3>
+          <div class="flex items-center gap-2 text-xs">
+            <span class="inline-flex items-center gap-1 text-slate-500"><span class="w-2.5 h-2.5 rounded-full bg-blue-500 inline-block"></span> Testigo H1</span>
+            <span class="inline-flex items-center gap-1 text-slate-500"><span class="w-2.5 h-2.5 rounded-full bg-orange-500 inline-block"></span> Testigo H2</span>
+            <span class="inline-flex items-center gap-1 text-slate-500"><span class="w-2.5 h-2.5 rounded-full bg-red-400 inline-block"></span> Aire H2</span>
+          </div>
+        </div>
+        <div class="relative w-full h-72">
+          <canvas id="thermalChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Matriz de Convolución / Distribución de tiempo -->
+      <div class="lg:col-span-4 bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-5 flex flex-col justify-between">
+        <div>
+          <h3 class="text-sm font-bold text-slate-800 dark:text-slate-100 mb-2 flex items-center gap-2">
+            <svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"/></svg>
+            Matriz de Intersección Temporal
+          </h3>
+          <p class="text-xs text-slate-500 dark:text-slate-400 mb-3">
+            Muestra el porcentaje del tiempo de cada zona del Horno 1 transferido a las zonas del Horno 2 (proyección normalizada).
+          </p>
+          <div class="overflow-x-auto custom-scrollbar">
+            <table class="w-full text-center text-[11px] border border-slate-200 dark:border-slate-700">
+              <thead id="matrix-head" class="bg-slate-100 dark:bg-slate-900/60 font-semibold">
+                <!-- Se llena dinámicamente -->
+              </thead>
+              <tbody id="matrix-body" class="divide-y divide-slate-100 dark:divide-slate-700 font-mono">
+                <!-- Se llena dinámicamente -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="mt-4 pt-3 border-t border-slate-100 dark:border-slate-700 text-[11px] text-slate-400 flex items-center justify-between">
+          <span>Suma fila = 100% tiempo H1</span>
+          <span class="font-mono text-emerald-600 dark:text-emerald-400 font-semibold">Conservativo</span>
+        </div>
+      </div>
+    </div>
+
+    <details class="group bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-5">
+      <summary class="flex justify-between items-center font-bold text-sm text-slate-800 dark:text-slate-200 cursor-pointer list-none select-none">
+        <span class="flex items-center gap-2">
+          <svg class="w-4 h-4 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+          Secuencia de Cálculo y Formulación Detallada
+        </span>
+        <span class="transition group-open:rotate-180">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+        </span>
+      </summary>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4 pt-4 border-t border-slate-100 dark:border-slate-700 text-xs text-slate-600 dark:text-slate-300">
+        <div class="p-3 bg-slate-50 dark:bg-slate-900/40 rounded-xl space-y-1.5 border border-slate-200 dark:border-slate-700">
+          <div class="font-bold text-slate-900 dark:text-white">1. Calor Acumulado Horno 2 (Q por zona)</div>
+          <p>Se calcula proyectando el calor absorbido por unidad de tiempo de Horno 1 mediante la matriz de fracciones de solapamiento temporal w(i, j):</p>
+          <code class="block bg-white dark:bg-slate-800 p-2 rounded text-[11px] font-mono border">Q_2[j] = Σ (Q_1[i] × w[i, j]) [kJ/m²]</code>
+          <p class="text-[11px] text-slate-400">Garantiza idéntica energía transferida en cada etapa del proceso.</p>
+        </div>
+
+        <div class="p-3 bg-slate-50 dark:bg-slate-900/40 rounded-xl space-y-1.5 border border-slate-200 dark:border-slate-700">
+          <div class="font-bold text-slate-900 dark:text-white">2. Flux Requerido y Diferencial (ΔT) del Testigo</div>
+          <p>Con el tiempo de residencia de la zona t_zona2 = Tiempo total / Zonas Horno 2:</p>
+          <code class="block bg-white dark:bg-slate-800 p-2 rounded text-[11px] font-mono border">Flux (W/m²) = (Q_2 × 1000) / t_zona2<br>ΔT (°C) = Q_2 / Cp_testigo</code>
+          <p class="text-[11px] text-slate-400">T_testigo(j) = T_testigo(j-1) + ΔT(j).</p>
+        </div>
+
+        <div class="p-3 bg-slate-50 dark:bg-slate-900/40 rounded-xl space-y-1.5 border border-slate-200 dark:border-slate-700">
+          <div class="font-bold text-slate-900 dark:text-white">3. Temperatura Aire Horno 2</div>
+          <p>Despejando de la ley de enfriamiento y calentamiento por convección (Flux = U · (T_aire - T_promedio)):</p>
+          <code class="block bg-white dark:bg-slate-800 p-2 rounded text-[11px] font-mono border">T_aire = T_promedio_testigo + (Flux / U) [°C]</code>
+          <p class="text-[11px] text-slate-400">Donde T_promedio_testigo = (T_inicio + T_fin) / 2.</p>
+        </div>
+      </div>
+    </details>
+  </main>
+
+  <script>
+    // Configuración inicial basada fielmente en los datos de la imagen
+    const defaultData = {
+      tInicialH1: 28.0,
+      tInicialH2: 28.0,
+      timeH1: 360,
+      timeH2: 360,
+      cpTestigo: 20.6984, // derivado de Q / dT = 285.63 / (41.8 - 28) = 20.6978 kJ/(m2 °C)
+      useStrictExcelZone1: false, // modo para alternar fórmula exacta de celda excel en zona 1
+      h1Zones: [
+        { zone: 1, tAire: 160.0, tTestigo: 41.8 },
+        { zone: 2, tAire: 177.0, tTestigo: 53.8 },
+        { zone: 3, tAire: 188.0, tTestigo: 76.5 },
+        { zone: 4, tAire: 184.0, tTestigo: 90.5 },
+        { zone: 5, tAire: 168.0, tTestigo: 99.4 },
+        { zone: 6, tAire: 140.0, tTestigo: 103.3 }
+      ],
+      h2Zones: [
+        { zone: 1, u: 67.3 },
+        { zone: 2, u: 85.0 },
+        { zone: 3, u: 123.8 }
+      ]
+    };
+
+    // Estado activo
+    let appState = JSON.parse(JSON.stringify(defaultData));
+    let thermalChart = null;
+
+    function showToast(message, type = 'info') {
+      const toast = document.getElementById('status-toast');
+      const inner = document.getElementById('status-toast-inner');
+      const msg = document.getElementById('status-toast-msg');
+      if (!toast || !inner || !msg) return;
+
+      msg.innerText = message;
+      if (type === 'success') {
+        inner.className = 'py-2.5 px-4 rounded-xl text-xs font-bold flex items-center justify-between shadow-sm bg-emerald-100 text-emerald-800 dark:bg-emerald-950/70 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800';
+      } else if (type === 'warning') {
+        inner.className = 'py-2.5 px-4 rounded-xl text-xs font-bold flex items-center justify-between shadow-sm bg-amber-100 text-amber-900 dark:bg-amber-950/80 dark:text-amber-200 border border-amber-300 dark:border-amber-700';
+      } else {
+        inner.className = 'py-2.5 px-4 rounded-xl text-xs font-bold flex items-center justify-between shadow-sm bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700';
+      }
+      toast.classList.remove('hidden');
+      setTimeout(() => {
+        toast.classList.add('hidden');
+      }, 4500);
+    }
+
+    // Validación exhaustiva de campos antes de realizar el cálculo
+    function validateAllFields() {
+      const requiredInputs = [
+        { id: 'input-t-inicial-h1', name: 'Temperatura Inicial (Horno 1)' },
+        { id: 'input-t-inicial-h2', name: 'Temperatura Inicial (Horno 2)' },
+        { id: 'input-time-h1', name: 'Tiempo de Perfil (Horno 1)' },
+        { id: 'input-time-h2', name: 'Tiempo de Perfil (Horno 2)' },
+        { id: 'input-cp-testigo', name: 'Capacitancia Térmica (Cp)' }
+      ];
+
+      for (const item of requiredInputs) {
+        const el = document.getElementById(item.id);
+        if (!el || el.value.trim() === '' || isNaN(Number(el.value))) {
+          return { valid: false, message: `Falta llenar el campo: ${item.name}` };
+        }
+      }
+
+      // Validar inputs de tabla Horno 1
+      const h1Inputs = document.querySelectorAll('.h1-input');
+      for (const input of h1Inputs) {
+        if (input.value.trim() === '' || isNaN(Number(input.value))) {
+          const zone = input.getAttribute('data-zone') || '';
+          const field = input.getAttribute('data-field') === 'tAire' ? 'T Prom Aire' : 'T Testigo';
+          return { valid: false, message: `Falta completar ${field} en la Zona ${zone} de Horno 1.` };
+        }
+      }
+
+      // Validar inputs de tabla Horno 2
+      const h2Inputs = document.querySelectorAll('.h2-u-input');
+      for (const input of h2Inputs) {
+        if (input.value.trim() === '' || isNaN(Number(input.value))) {
+          const zone = input.getAttribute('data-zone') || '';
+          return { valid: false, message: `Falta completar el coeficiente U en la Zona ${zone} de Horno 2.` };
+        }
+      }
+
+      return { valid: true };
+    }
+
+    function calculateThermalTransfer() {
+      const { tInicialH1, tInicialH2, timeH1, timeH2, cpTestigo, useStrictExcelZone1, h1Zones, h2Zones } = appState;
+      const numZ1 = h1Zones.length;
+      const numZ2 = h2Zones.length;
+      const tDwell1 = timeH1 / Math.max(1, numZ1);
+      const tDwell2 = timeH2 / Math.max(1, numZ2);
+
+      // 1. Calcular Horno 1 (Perfil de Referencia)
+      let prevWitness = tInicialH1;
+      const h1Calculated = h1Zones.map((z) => {
+        const deltaT = z.tTestigo - prevWitness;
+        const qAcum = deltaT * cpTestigo;
+        const flux = (qAcum * 1000) / tDwell1;
+        const tWitnessProm = (prevWitness + z.tTestigo) / 2;
+        const deltaTLog = z.tAire - tWitnessProm;
+        const u = deltaTLog !== 0 ? flux / deltaTLog : 0;
+
+        const out = {
+          zone: z.zone,
+          tAire: z.tAire,
+          tTestigo: z.tTestigo,
+          tWitnessStart: prevWitness,
+          deltaT,
+          qAcum,
+          flux,
+          u
+        };
+        prevWitness = z.tTestigo;
+        return out;
+      });
+
+      // 2. Construir matriz de intersección temporal normalizada
+      const matrix = [];
+      for (let i = 0; i < numZ1; i++) {
+        matrix[i] = [];
+        const start1 = i / numZ1;
+        const end1 = (i + 1) / numZ1;
+        for (let j = 0; j < numZ2; j++) {
+          const start2 = j / numZ2;
+          const end2 = (j + 1) / numZ2;
+          const overlap = Math.max(0, Math.min(end1, end2) - Math.max(start1, start2));
+          matrix[i][j] = overlap * numZ1;
+        }
+      }
+
+      // 3. Calcular Horno 2 (Perfil Cruzado) partiendo de tInicialH2
+      let currentWitnessH2 = tInicialH2;
+      const h2Calculated = h2Zones.map((z, j) => {
+        let qAcumH2 = 0;
+        for (let i = 0; i < numZ1; i++) {
+          qAcumH2 += h1Calculated[i].qAcum * matrix[i][j];
+        }
+
+        const fluxH2 = (qAcumH2 * 1000) / tDwell2;
+        const deltaTH2 = qAcumH2 / cpTestigo;
+        const tWitnessEnd = currentWitnessH2 + deltaTH2;
+        const tWitnessProm = (currentWitnessH2 + tWitnessEnd) / 2;
+
+        let tAireH2;
+        if (useStrictExcelZone1 && j === 0) {
+          tAireH2 = tWitnessEnd + (fluxH2 / z.u);
+        } else {
+          tAireH2 = tWitnessProm + (fluxH2 / z.u);
+        }
+
+        const outData = {
+          zone: z.zone,
+          u: z.u,
+          qAcum: qAcumH2,
+          flux: fluxH2,
+          deltaT: deltaTH2,
+          tWitnessStart: currentWitnessH2,
+          tWitnessEnd: tWitnessEnd,
+          tWitnessProm: tWitnessProm,
+          tAire: tAireH2
+        };
+
+        currentWitnessH2 = tWitnessEnd;
+        return outData;
+      });
+
+      return {
+        h1Calculated,
+        h2Calculated,
+        matrix,
+        tDwell1,
+        tDwell2
+      };
+    }
+
+    // Renderiza únicamente las filas editables de entrada
+    function renderInputTables() {
+      const numZ1 = appState.h1Zones.length;
+      const numZ2 = appState.h2Zones.length;
+      const time1 = parseFloat(document.getElementById('input-time-h1').value) || appState.timeH1;
+      const time2 = parseFloat(document.getElementById('input-time-h2').value) || appState.timeH2;
+      const tDwell1 = time1 / Math.max(1, numZ1);
+      const tDwell2 = time2 / Math.max(1, numZ2);
+
+      document.getElementById('label-dwell-h1').innerText = `Dwell: ${(tDwell1).toFixed(1)} s / zona (${numZ1} zonas)`;
+      document.getElementById('label-dwell-h2').innerText = `Dwell: ${(tDwell2).toFixed(1)} s / zona (${numZ2} zonas)`;
+
+      // Horno 1 inputs
+      const tbodyH1 = document.getElementById('tbody-horno1');
+      tbodyH1.innerHTML = '';
+      appState.h1Zones.forEach((z, idx) => {
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-slate-50/70 dark:hover:bg-slate-700/50 transition-colors';
+        const valTAire = z.tAire !== null && z.tAire !== undefined ? z.tAire : '';
+        const valTTestigo = z.tTestigo !== null && z.tTestigo !== undefined ? z.tTestigo : '';
+        tr.innerHTML = `
+          <td class="py-2 px-2 font-bold text-slate-700 dark:text-slate-300">Z${z.zone}</td>
+          <td class="py-1 px-2">
+            <input type="number" step="0.1" value="${valTAire}" data-idx="${idx}" data-zone="${z.zone}" data-field="tAire" class="h1-input w-20 px-2 py-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded text-xs font-semibold focus:ring-1 focus:ring-orange-500">
+          </td>
+          <td class="py-1 px-2">
+            <input type="number" step="0.1" value="${valTTestigo}" data-idx="${idx}" data-zone="${z.zone}" data-field="tTestigo" class="h1-input w-20 px-2 py-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded text-xs font-semibold focus:ring-1 focus:ring-orange-500 text-blue-600 dark:text-blue-400">
+          </td>
+          <td class="py-2 px-2 text-right font-mono" id="h1-flux-${idx}">-</td>
+          <td class="py-2 px-2 text-right font-mono font-semibold text-slate-900 dark:text-slate-100" id="h1-q-${idx}">-</td>
+          <td class="py-2 px-2 text-right font-mono text-slate-500" id="h1-u-${idx}">-</td>
+        `;
+        tbodyH1.appendChild(tr);
+      });
+
+      // Horno 2 inputs
+      const tbodyH2 = document.getElementById('tbody-horno2-config');
+      tbodyH2.innerHTML = '';
+      appState.h2Zones.forEach((z, idx) => {
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-slate-50/70 dark:hover:bg-slate-700/50 transition-colors';
+        const valU = z.u !== null && z.u !== undefined ? z.u : '';
+        tr.innerHTML = `
+          <td class="py-2 px-3 font-bold text-slate-700 dark:text-slate-300">Zona ${z.zone}</td>
+          <td class="py-2 px-3 text-slate-500 font-mono">${tDwell2.toFixed(1)} s</td>
+          <td class="py-1 px-3">
+            <div class="flex items-center gap-1.5">
+              <input type="number" step="0.1" value="${valU}" data-idx="${idx}" data-zone="${z.zone}" class="h2-u-input w-24 px-2 py-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded text-xs font-bold text-orange-600 focus:ring-1 focus:ring-orange-500">
+              <span class="text-[10px] text-slate-400">W/m²·°C</span>
+            </div>
+          </td>
+          <td class="py-2 px-3 text-slate-400 font-mono text-xs">${((1 / numZ2) * 100).toFixed(1)}%</td>
+        `;
+        tbodyH2.appendChild(tr);
+      });
+    }
+
+    // Procesa los cálculos y muestra los resultados en las tablas, métricas y gráfica
+    function executeCalculation() {
+      // 1. Validar que no falte ningún dato
+      const validation = validateAllFields();
+      if (!validation.valid) {
+        showToast(validation.message + ' Debes llenar todos los campos antes de calcular.', 'warning');
+        return;
+      }
+
+      // 2. Extraer datos globales
+      appState.tInicialH1 = parseFloat(document.getElementById('input-t-inicial-h1').value);
+      appState.tInicialH2 = parseFloat(document.getElementById('input-t-inicial-h2').value);
+      appState.timeH1 = parseFloat(document.getElementById('input-time-h1').value);
+      appState.timeH2 = parseFloat(document.getElementById('input-time-h2').value);
+      appState.cpTestigo = parseFloat(document.getElementById('input-cp-testigo').value);
+
+      // 3. Extraer zonas de Horno 1
+      document.querySelectorAll('.h1-input').forEach(input => {
+        const idx = parseInt(input.dataset.idx, 10);
+        const field = input.dataset.field;
+        const val = parseFloat(input.value);
+        if (appState.h1Zones[idx]) {
+          appState.h1Zones[idx][field] = val;
+        }
+      });
+
+      // 4. Extraer coeficientes U de Horno 2
+      document.querySelectorAll('.h2-u-input').forEach(input => {
+        const idx = parseInt(input.dataset.idx, 10);
+        const val = parseFloat(input.value);
+        if (appState.h2Zones[idx]) {
+          appState.h2Zones[idx].u = val;
+        }
+      });
+
+      // 5. Ejecutar la secuencia de cálculo
+      const results = calculateThermalTransfer();
+      const { h1Calculated, h2Calculated } = results;
+
+      // Actualizar columnas calculadas de Horno 1
+      let sumQA1 = 0;
+      let sumTAire1 = 0;
+      h1Calculated.forEach((row, idx) => {
+        sumQA1 += row.qAcum;
+        sumTAire1 += row.tAire;
+        const fluxCell = document.getElementById(`h1-flux-${idx}`);
+        const qCell = document.getElementById(`h1-q-${idx}`);
+        const uCell = document.getElementById(`h1-u-${idx}`);
+        if (fluxCell) fluxCell.innerText = row.flux.toFixed(2);
+        if (qCell) qCell.innerText = row.qAcum.toFixed(2);
+        if (uCell) uCell.innerText = row.u.toFixed(2);
+      });
+
+      document.getElementById('h1-t-prom-avg').innerText = (sumTAire1 / h1Calculated.length).toFixed(1) + ' °C';
+      document.getElementById('h1-t-final').innerText = h1Calculated[h1Calculated.length - 1].tTestigo.toFixed(1) + ' °C';
+      document.getElementById('h1-q-total').innerText = sumQA1.toFixed(2) + ' kJ/m²';
+
+      // Actualizar Tabla de Resultados (Perfil Cruzado)
+      const tbodyCruzado = document.getElementById('tbody-perfil-cruzado');
+      tbodyCruzado.innerHTML = '';
+      let totalQ2 = 0;
+      let maxFlux = 0;
+
+      h2Calculated.forEach((row) => {
+        totalQ2 += row.qAcum;
+        if (row.flux > maxFlux) maxFlux = row.flux;
+
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-orange-50/40 dark:hover:bg-slate-700/60 transition-colors';
+        tr.innerHTML = `
+          <td class="py-3 px-4 font-bold text-slate-900 dark:text-white flex items-center gap-2">
+            <span class="w-6 h-6 rounded-full bg-orange-100 dark:bg-orange-950/70 text-orange-600 dark:text-orange-400 flex items-center justify-center text-xs">${row.zone}</span>
+            <span>Zona ${row.zone}</span>
+          </td>
+          <td class="py-3 px-4 font-mono font-semibold text-slate-800 dark:text-slate-200">
+            ${row.qAcum.toFixed(2)}
+          </td>
+          <td class="py-3 px-4 font-mono font-bold text-blue-600 dark:text-blue-400">
+            ${row.flux.toFixed(2)}
+          </td>
+          <td class="py-3 px-4 font-mono text-slate-600 dark:text-slate-300">
+            +${row.deltaT.toFixed(2)}
+          </td>
+          <td class="py-3 px-4 font-mono font-semibold text-slate-900 dark:text-white">
+            ${row.tWitnessEnd.toFixed(2)}
+          </td>
+          <td class="py-3 px-4 font-mono text-base font-extrabold text-orange-600 dark:text-orange-400 bg-orange-50/50 dark:bg-orange-950/30">
+            ${row.tAire.toFixed(2)} °C
+          </td>
+        `;
+        tbodyCruzado.appendChild(tr);
+      });
+
+      // Tfoot cruzado
+      const finalWitnessTemp = h2Calculated[h2Calculated.length - 1].tWitnessEnd;
+      document.getElementById('tfoot-perfil-cruzado').innerHTML = `
+        <td class="py-3 px-4 text-slate-600 dark:text-slate-300 font-bold">Total / Salida</td>
+        <td class="py-3 px-4 font-mono text-orange-600 dark:text-orange-400 font-extrabold">${totalQ2.toFixed(2)}</td>
+        <td class="py-3 px-4 font-mono text-slate-500">Prom: ${(totalQ2 * 1000 / appState.timeH2).toFixed(2)}</td>
+        <td class="py-3 px-4 font-mono text-slate-600 dark:text-slate-300">+${(finalWitnessTemp - appState.tInicialH2).toFixed(2)}</td>
+        <td class="py-3 px-4 font-mono font-extrabold text-slate-900 dark:text-white">${finalWitnessTemp.toFixed(2)} °C</td>
+        <td class="py-3 px-4 font-mono text-slate-400 font-normal text-xs">-</td>
+      `;
+
+      // Métricas Cards
+      document.getElementById('metric-total-heat').innerText = totalQ2.toFixed(2);
+      document.getElementById('metric-final-temp').innerText = finalWitnessTemp.toFixed(2) + ' °C';
+      document.getElementById('metric-temp-diff').innerText = `ΔT total: +${(finalWitnessTemp - appState.tInicialH2).toFixed(2)} °C`;
+      document.getElementById('metric-max-flux').innerText = maxFlux.toFixed(1) + ' W/m²';
+      
+      const balancePct = sumQA1 > 0 ? (totalQ2 / sumQA1) * 100 : 100;
+      document.getElementById('metric-balance').innerText = balancePct.toFixed(1) + '%';
+
+      // Renderizar Matriz y Gráfico
+      renderMatrix(results);
+      renderChart(results);
+
+      showToast('Cálculo térmico completado con éxito.', 'success');
+    }
+
+    function renderChart({ h1Calculated, h2Calculated, tDwell1, tDwell2 }) {
+      const ctx = document.getElementById('thermalChart').getContext('2d');
+
+      const pointsWitnessH1 = [{ x: 0, y: appState.tInicialH1 }];
+      h1Calculated.forEach((z, i) => {
+        pointsWitnessH1.push({ x: (i + 1) * tDwell1, y: z.tTestigo });
+      });
+
+      const pointsWitnessH2 = [{ x: 0, y: appState.tInicialH2 }];
+      h2Calculated.forEach((z, j) => {
+        pointsWitnessH2.push({ x: (j + 1) * tDwell2, y: z.tWitnessEnd });
+      });
+
+      const pointsAirH2 = [];
+      h2Calculated.forEach((z, j) => {
+        pointsAirH2.push({ x: j * tDwell2, y: z.tAire });
+        pointsAirH2.push({ x: (j + 1) * tDwell2, y: z.tAire });
+      });
+
+      if (thermalChart) {
+        thermalChart.destroy();
+      }
+
+      thermalChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          datasets: [
+            {
+              label: 'Testigo H1 (Referencia)',
+              data: pointsWitnessH1,
+              borderColor: '#3b82f6',
+              backgroundColor: '#3b82f6',
+              borderWidth: 2.5,
+              pointRadius: 4,
+              tension: 0.2
+            },
+            {
+              label: 'Testigo H2 (Cruzado)',
+              data: pointsWitnessH2,
+              borderColor: '#f97316',
+              backgroundColor: '#f97316',
+              borderWidth: 3,
+              pointRadius: 5,
+              tension: 0.1
+            },
+            {
+              label: 'Aire Horno 2 (Setpoints)',
+              data: pointsAirH2,
+              borderColor: '#ef4444',
+              backgroundColor: 'rgba(239, 68, 68, 0.08)',
+              borderWidth: 2,
+              borderDash: [5, 5],
+              pointRadius: 0,
+              fill: true,
+              stepped: true
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: {
+            mode: 'index',
+            intersect: false,
+          },
+          scales: {
+            x: {
+              type: 'linear',
+              title: {
+                display: true,
+                text: 'Tiempo de perfil transcurrido (segundos)',
+                color: '#94a3b8',
+                font: { size: 11, weight: 'bold' }
+              },
+              grid: { color: 'rgba(148, 163, 184, 0.1)' }
+            },
+            y: {
+              title: {
+                display: true,
+                text: 'Temperatura (°C)',
+                color: '#94a3b8',
+                font: { size: 11, weight: 'bold' }
+              },
+              grid: { color: 'rgba(148, 163, 184, 0.1)' },
+              suggestedMin: 20
+            }
+          },
+          plugins: {
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  return `${context.dataset.label}: ${context.parsed.y.toFixed(1)} °C (${context.parsed.x.toFixed(0)} s)`;
+                }
+              }
+            },
+            legend: {
+              display: false
+            }
+          }
+        }
+      });
+    }
+
+    function renderMatrix({ matrix, h1Calculated, h2Calculated }) {
+      const thead = document.getElementById('matrix-head');
+      const tbody = document.getElementById('matrix-body');
+      if (!thead || !tbody) return;
+
+      let headHtml = '<tr><th class="py-1.5 px-2 text-slate-500">H1 \\ H2</th>';
+      h2Calculated.forEach(z => {
+        headHtml += `<th class="py-1.5 px-2 text-orange-600 dark:text-orange-400">Z${z.zone}</th>`;
+      });
+      headHtml += '</tr>';
+      thead.innerHTML = headHtml;
+
+      let bodyHtml = '';
+      h1Calculated.forEach((row, i) => {
+        bodyHtml += `<tr class="hover:bg-slate-50/70 dark:hover:bg-slate-800/50">`;
+        bodyHtml += `<td class="py-1.5 px-2 font-semibold text-slate-700 dark:text-slate-300">Z${row.zone}</td>`;
+        for (let j = 0; j < h2Calculated.length; j++) {
+          const frac = matrix[i] && matrix[i][j] !== undefined ? matrix[i][j] : 0;
+          const highlight = frac > 0 ? 'text-blue-600 dark:text-blue-400 font-bold bg-blue-50/40 dark:bg-blue-950/20' : 'text-slate-400';
+          bodyHtml += `<td class="py-1.5 px-2 ${highlight}">${(frac * 100).toFixed(1)}%</td>`;
+        }
+        bodyHtml += `</tr>`;
+      });
+      tbody.innerHTML = bodyHtml;
+    }
+
+    function clearResults() {
+      document.getElementById('tbody-perfil-cruzado').innerHTML = `
+        <tr><td colspan="6" class="py-6 text-center text-slate-400 text-xs italic">Presiona el botón "Calcular" para generar el perfil cruzado.</td></tr>
+      `;
+      document.getElementById('tfoot-perfil-cruzado').innerHTML = '';
+      document.getElementById('matrix-head').innerHTML = '';
+      document.getElementById('matrix-body').innerHTML = '';
+      document.getElementById('metric-total-heat').innerText = '-';
+      document.getElementById('metric-final-temp').innerText = '-';
+      document.getElementById('metric-temp-diff').innerText = 'ΔT total: -';
+      document.getElementById('metric-max-flux').innerText = '-';
+      document.getElementById('metric-balance').innerText = '-';
+      document.getElementById('h1-t-prom-avg').innerText = '-';
+      document.getElementById('h1-t-final').innerText = '-';
+      document.getElementById('h1-q-total').innerText = '-';
+
+      if (thermalChart) {
+        thermalChart.destroy();
+        thermalChart = null;
+      }
+    }
+
+    // BOTÓN CALCULAR: Único disparador del cálculo
+    document.getElementById('btn-calcular').addEventListener('click', () => {
+      executeCalculation();
+    });
+
+    // BOTÓN BORRAR: Limpia todos los campos y los resultados
+    document.getElementById('btn-borrar').addEventListener('click', () => {
+      document.getElementById('input-t-inicial-h1').value = '';
+      document.getElementById('input-t-inicial-h2').value = '';
+      document.getElementById('input-time-h1').value = '';
+      document.getElementById('input-time-h2').value = '';
+      document.getElementById('input-cp-testigo').value = '';
+
+      appState.tInicialH1 = null;
+      appState.tInicialH2 = null;
+      appState.timeH1 = 0;
+      appState.timeH2 = 0;
+      appState.cpTestigo = 0;
+
+      appState.h1Zones = [
+        { zone: 1, tAire: '', tTestigo: '' }
+      ];
+      appState.h2Zones = [
+        { zone: 1, u: '' }
+      ];
+
+      renderInputTables();
+      clearResults();
+      showToast('Se han borrado los datos. Llena todos los campos y pulsa "Calcular".', 'warning');
+    });
+
+    // Agregar / Quitar zonas Horno 1 (sólo altera filas, requiere pulsar Calcular)
+    document.getElementById('btn-add-z1').addEventListener('click', () => {
+      const nextZone = appState.h1Zones.length + 1;
+      appState.h1Zones.push({
+        zone: nextZone,
+        tAire: '',
+        tTestigo: ''
+      });
+      renderInputTables();
+    });
+
+    document.getElementById('btn-rem-z1').addEventListener('click', () => {
+      if (appState.h1Zones.length > 1) {
+        appState.h1Zones.pop();
+        renderInputTables();
+      }
+    });
+
+    // Agregar / Quitar zonas Horno 2 (sólo altera filas, requiere pulsar Calcular)
+    document.getElementById('btn-add-z2').addEventListener('click', () => {
+      const nextZone = appState.h2Zones.length + 1;
+      appState.h2Zones.push({
+        zone: nextZone,
+        u: ''
+      });
+      renderInputTables();
+    });
+
+    document.getElementById('btn-rem-z2').addEventListener('click', () => {
+      if (appState.h2Zones.length > 1) {
+        appState.h2Zones.pop();
+        renderInputTables();
+      }
+    });
+
+    // Alternar modelo de fórmula
+    const optTProm = document.getElementById('opt-t-prom');
+    const optTExcel = document.getElementById('opt-t-excel');
+
+    optTProm.addEventListener('click', () => {
+      appState.useStrictExcelZone1 = false;
+      optTProm.className = 'px-2.5 py-1 rounded-lg font-semibold bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm transition';
+      optTExcel.className = 'px-2.5 py-1 rounded-lg font-semibold text-slate-500 dark:text-slate-400 hover:text-slate-900 transition';
+      executeCalculation();
+    });
+
+    optTExcel.addEventListener('click', () => {
+      appState.useStrictExcelZone1 = true;
+      optTExcel.className = 'px-2.5 py-1 rounded-lg font-semibold bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm transition';
+      optTProm.className = 'px-2.5 py-1 rounded-lg font-semibold text-slate-500 dark:text-slate-400 hover:text-slate-900 transition';
+      executeCalculation();
+    });
+
+    // Restablecer datos originales
+    document.getElementById('btn-load-excel').addEventListener('click', () => {
+      appState = JSON.parse(JSON.stringify(defaultData));
+      document.getElementById('input-t-inicial-h1').value = appState.tInicialH1;
+      document.getElementById('input-t-inicial-h2').value = appState.tInicialH2;
+      document.getElementById('input-time-h1').value = appState.timeH1;
+      document.getElementById('input-time-h2').value = appState.timeH2;
+      document.getElementById('input-cp-testigo').value = appState.cpTestigo;
+      renderInputTables();
+      executeCalculation();
+      showToast('Datos originales restablecidos y calculados.', 'info');
+    });
+
+    // Dark Mode Toggle
+    const themeBtn = document.getElementById('theme-toggle');
+    const darkIcon = document.getElementById('theme-icon-dark');
+    const lightIcon = document.getElementById('theme-icon-light');
+
+    themeBtn.addEventListener('click', () => {
+      document.documentElement.classList.toggle('dark');
+      const isDark = document.documentElement.classList.contains('dark');
+      if (isDark) {
+        darkIcon.classList.remove('hidden');
+        lightIcon.classList.add('hidden');
+      } else {
+        darkIcon.classList.add('hidden');
+        lightIcon.classList.remove('hidden');
+      }
+    });
+
+    // Inicialización al cargar la ventana
+    window.onload = function() {
+      renderInputTables();
+      executeCalculation();
+    };
+  </script>
+</body>
+</html>
